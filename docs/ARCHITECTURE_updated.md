@@ -103,6 +103,7 @@ Komponen utama:
   - `assigned_field_agent_id` (nullable, diisi ketika aplikasi di-book / dijadwalkan)
   - `scheduled_visit_at` (nullable, waktu survei yang direncanakan)
   - `created_at`, `updated_at`
+  - **Business rule:** ketika `assigned_field_agent_id` terisi dan `status = scheduled`, aplikasi tidak boleh di-schedule oleh Field Agent lain; semua operasi schedule harus melakukan cek kondisi ini.
 
 - `surveys`
   - `application_id`
@@ -118,8 +119,13 @@ Komponen utama:
   - `risk_score`
   - `risk_category`
   - `suggested_loan_limit`
+  - `business_health_summary`
   - `top_reasons`
-  - `summary`
+  - `risk_factors`
+  - `supporting_evidence`
+  - `mitigation_notes`
+  - `visual_observations`
+  - `consistency_checks`
   - `raw_ai_payload` (opsional, trimmed)
   - `scored_at`
 

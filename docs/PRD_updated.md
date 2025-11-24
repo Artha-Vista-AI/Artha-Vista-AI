@@ -144,14 +144,17 @@ Tanpa pendekatan scoring yang lebih data-driven dan inklusif, jutaan pelaku UMKM
 ### 6.2 Field Agent
 
 1. Login ke Artha Vista dashboard (React + Firebase Auth).
-2. Melihat daftar aplikasi yang perlu dikunjungi.
-3. Kunjungan ke lokasi borrower:
+2. Melihat daftar aplikasi **status `new`** di wilayahnya.
+3. **Set jadwal kunjungan (schedule visit):**
+   - Field Agent memilih salah satu aplikasi dan menentukan tanggal/jam kunjungan.
+   - Sistem meng-update status aplikasi menjadi `scheduled` dan mengisi `assigned_field_agent_id` dengan Field Agent tersebut.
+   - Aplikasi yang sudah `scheduled` **tidak muncul lagi** di list Field Agent lain (menghindari double visit).
+4. Pada hari H, Field Agent melakukan kunjungan ke lokasi borrower:
    - Isi form survey singkat (omzet, lama usaha, dsb).
    - Tulis catatan kunjungan.
    - Upload 3–5 foto (warung, stok, rumah, dll).
-4. Submit kunjungan → backend simpan ke Firestore dan kirim permintaan scoring ke AI layer.
-5. Setelah skor tersedia, Field Agent bisa melihat highlight (opsional di MVP).
-
+5. Submit kunjungan → backend simpan ke Firestore dan kirim permintaan scoring ke AI layer.
+6. Setelah skor tersedia, Field Agent bisa melihat highlight utama (opsional di MVP) untuk membantu menjelaskan ke borrower atau ke Officer.
 ### 6.3 Agent Officer
 
 1. Login ke dashboard officer.
@@ -214,13 +217,19 @@ Requirement:
   - Data profil usaha (numerik & kategori).
   - Catatan kunjungan (teks).
   - URL foto dari Cloud Storage.
-- Output:
-  - `risk_score` (0–100 atau Low/Medium/High).
-  - `suggested_loan_limit`.
-  - `risk_category`.
-  - `top_reasons` (list string).
-  - `summary` (paragraf pendek).
+- Output (minimal untuk MVP):
+  - `risk_score` (0–100) dan `risk_category` (Low / Medium / High).
+  - `suggested_loan_limit` + catatan range aman (mis: “disarankan 4.5–5 juta”).
+  - `summary` : ringkasan 3–5 kalimat tentang kondisi usaha & peminjam.
+  - `top_reasons` : 3–7 alasan utama yang menjelaskan kenapa skor segitu (gabungan faktor positif & negatif).
+  - `business_health_summary` : paragraf khusus yang menjelaskan kesehatan usaha (stabilitas omzet, keragaman pelanggan, ketergantungan pada pemasok tunggal, dll).
+  - `risk_factors` : list terstruktur berisi kode faktor risiko, label, dan apakah pengaruhnya positif/negatif (misal: `SHORT_BUSINESS_AGE`, `STABLE_REVENUE`, `HIGH_EXISTING_DEBT`).
+  - `supporting_evidence` : potongan catatan field agent dan deskripsi foto yang dipakai AI sebagai bukti (misal: “stok di rak hampir habis di semua kategori barang fast moving”).
+  - `mitigation_notes` : saran mitigasi yang bisa dipakai Officer (misal: mulai dengan limit lebih kecil, minta dokumen tambahan, atau pantau pembayaran 2 siklus dulu).
+  - `visual_observations` : insight yang berasal dari analisis foto (kondisi toko/rumah, kerapihan stok, keberadaan peralatan usaha).
+  - `consistency_checks` : hasil cek konsistensi antara data numerik dan observasi lapangan (contoh: omzet vs nilai stok, klaim omzet vs kondisi toko).
 
+Semua output ini disimpan dalam entity/collection `scores` dan ditampilkan sebagai panel **AI Insights** di dashboard Officer, sehingga Officer tidak hanya melihat angka, tapi juga narasi dan bukti pendukung yang mudah dijelaskan ke borrower dan tim audit.
 ### 7.5 Dashboard Officer
 
 - List view:

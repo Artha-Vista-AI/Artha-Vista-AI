@@ -166,11 +166,68 @@ List aplikasi dengan filter status, skor, wilayah.
     "risk_score": 62,
     "risk_category": "medium",
     "suggested_loan_limit": 4500000,
+
+    "business_health_summary": "Usaha stabil, stok rapi, omzet konsisten 6 bulan terakhir.",
     "top_reasons": [
-      "Omzet stabil 6 bulan terakhir",
-      "Bisnis masih < 2 tahun"
+      "Omzet relatif stabil dalam 6 bulan terakhir",
+      "Usaha masih < 2 tahun sehingga risiko moderat",
+      "Tidak ada pinjaman aktif lain yang besar"
     ],
-    "summary": "Warung sembako dengan omzet stabil, namun usia usaha masih menengah..."
+
+    "risk_factors": [
+      {
+        "code": "SHORT_BUSINESS_AGE",
+        "label": "Usaha relatif baru",
+        "impact": "negative",
+        "weight": 0.25
+      },
+      {
+        "code": "STABLE_REVENUE",
+        "label": "Omzet stabil",
+        "impact": "positive",
+        "weight": 0.35
+      }
+    ],
+
+    "supporting_evidence": [
+      {
+        "source": "FIELD_NOTE",
+        "snippet": "Warung ramai di jam sibuk, pelanggan tetap cukup banyak."
+      },
+      {
+        "source": "PHOTO",
+        "description": "Rak stok tersusun rapi, barang fast moving tersedia."
+      }
+    ],
+
+    "mitigation_notes": [
+      "Mulai dengan limit sedikit di bawah pengajuan awal.",
+      "Pantau pembayaran 2 bulan pertama sebelum menaikkan limit."
+    ],
+
+    "visual_observations": [
+      {
+        "type": "STORE_CONDITION",
+        "value": "well_organized"
+      },
+      {
+        "type": "HOUSE_CONDITION",
+        "value": "simple_permanent"
+      }
+    ],
+
+    "consistency_checks": [
+      {
+        "field": "monthly_revenue",
+        "status": "consistent",
+        "details": "Estimasi lapangan sejalan dengan profil di aplikasi."
+      },
+      {
+        "field": "inventory_value",
+        "status": "slightly_low",
+        "details": "Nilai stok sedikit di bawah klaim omzet, perlu dipantau."
+      }
+    ]
   },
   "decision": {
     "status": "approved",
@@ -207,9 +264,63 @@ List aplikasi dengan filter status, skor, wilayah.
 }
 ```
 
+**Catatan:**
+- `status` dapat bernilai `new|scheduled|visited|scored|approved|rejected|need_more_detail`.
+- Jika `status = "scheduled"`, response juga menyertakan field `scheduled_visit_at` sehingga Field Agent bisa melihat jadwal kunjungan yang sudah di-book.
+
+
 ---
 
-### 3.2 Submit Survey & Photos
+
+### 3.2 Schedule Visit (Book Application)
+
+### POST `/api/field/applications/{application_id}/schedule`
+
+**Auth:**  
+- `ROLE_FIELD_AGENT`.
+
+**Description:**  
+Field Agent melakukan **booking**/scheduling kunjungan. Setelah aplikasi di-schedule oleh satu Field Agent, aplikasi tersebut **tidak bisa di-schedule** oleh Field Agent lain (kecuali di-unassign oleh Officer/Admin).
+
+**Request Body:**
+```json
+{
+  "scheduled_visit_at": "2025-11-25T09:00:00Z"
+}
+```
+
+**Behavior:**
+- Hanya bisa dipanggil jika:
+  - `status` aplikasi = `new` **dan**
+  - `assigned_field_agent_id` masih kosong.
+- Secara atomik update:
+  - `status` → `scheduled`
+  - `assigned_field_agent_id` → `current_user_id`
+  - `scheduled_visit_at` → dari request.
+- Jika aplikasi sudah di-assign ke agent lain, return **409 Conflict**.
+
+**Response 200:**
+```json
+{
+  "application_id": "APP-2025-0001",
+  "status": "scheduled",
+  "assigned_field_agent_id": "FA-123",
+  "scheduled_visit_at": "2025-11-25T09:00:00Z"
+}
+```
+
+**Response 409 (sudah di-book orang lain):**
+```json
+{
+  "error": {
+    "code": "ALREADY_ASSIGNED",
+    "message": "Application already scheduled by another field agent.",
+    "details": null
+  }
+}
+```
+
+### 3.3 Submit Survey & Photos
 
 ### POST `/api/applications/{application_id}/survey`
 
@@ -273,8 +384,68 @@ Field Agent submit hasil kunjungan + URL foto (upload via Firebase/Storage SDK, 
     "risk_score": 62,
     "risk_category": "medium",
     "suggested_loan_limit": 4500000,
-    "top_reasons": [ "..." ],
-    "summary": "..."
+
+    "business_health_summary": "Usaha stabil, stok rapi, omzet konsisten 6 bulan terakhir.",
+    "top_reasons": [
+      "Omzet relatif stabil dalam 6 bulan terakhir",
+      "Usaha masih < 2 tahun sehingga risiko moderat",
+      "Tidak ada pinjaman aktif lain yang besar"
+    ],
+
+    "risk_factors": [
+      {
+        "code": "SHORT_BUSINESS_AGE",
+        "label": "Usaha relatif baru",
+        "impact": "negative",
+        "weight": 0.25
+      },
+      {
+        "code": "STABLE_REVENUE",
+        "label": "Omzet stabil",
+        "impact": "positive",
+        "weight": 0.35
+      }
+    ],
+
+    "supporting_evidence": [
+      {
+        "source": "FIELD_NOTE",
+        "snippet": "Warung ramai di jam sibuk, pelanggan tetap cukup banyak."
+      },
+      {
+        "source": "PHOTO",
+        "description": "Rak stok tersusun rapi, barang fast moving tersedia."
+      }
+    ],
+
+    "mitigation_notes": [
+      "Mulai dengan limit sedikit di bawah pengajuan awal.",
+      "Pantau pembayaran 2 bulan pertama sebelum menaikkan limit."
+    ],
+
+    "visual_observations": [
+      {
+        "type": "STORE_CONDITION",
+        "value": "well_organized"
+      },
+      {
+        "type": "HOUSE_CONDITION",
+        "value": "simple_permanent"
+      }
+    ],
+
+    "consistency_checks": [
+      {
+        "field": "monthly_revenue",
+        "status": "consistent",
+        "details": "Estimasi lapangan sejalan dengan profil di aplikasi."
+      },
+      {
+        "field": "inventory_value",
+        "status": "slightly_low",
+        "details": "Nilai stok sedikit di bawah klaim omzet, perlu dipantau."
+      }
+    ]
   }
 }
 ```
